@@ -124,7 +124,15 @@ export default function DailyView({
       </div>
 
       <div className="w-full flex-shrink-0 space-y-4 lg:w-[360px]">
-        <MetricsCard metrics={metrics} onSave={onSaveMetrics} />
+        <MetricsCard
+          key={
+            metrics
+              ? `${metrics.date}-${metrics.sleep_hours}-${metrics.phone_minutes}-${metrics.study_minutes}`
+              : 'metrics-empty'
+          }
+          metrics={metrics}
+          onSave={onSaveMetrics}
+        />
         <DailyGoal score={score.value} />
         <ScoreCard score={score} />
         <BreakdownCard score={score} />

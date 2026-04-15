@@ -14,45 +14,64 @@ interface StoredState {
 }
 
 function getToday(): string {
-  return new Date().toISOString().split('T')[0];
+  const currentDate = new Date();
+  const year = currentDate.getFullYear();
+  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+  const day = String(currentDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-function loadState(): StoredState {
+function createDefaultState(): StoredState {
+  return {
+    xp: 0,
+    streak: 0,
+    lastCompletedDate: null,
+    totalCompleted: 0,
+    todayCompleted: 0,
+    lastTodayDate: getToday(),
+  };
+}
+
+function getStorageKey(userId: string | null): string | null {
+  return userId ? `${STORAGE_KEY}_${userId}` : null;
+}
+
+function loadState(userId: string | null): StoredState {
+  const storageKey = getStorageKey(userId);
+  if (!storageKey) {
+    return createDefaultState();
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     const parsed: StoredState = raw
       ? JSON.parse(raw)
-      : {
-          xp: 0,
-          streak: 0,
-          lastCompletedDate: null,
-          totalCompleted: 0,
-          todayCompleted: 0,
-          lastTodayDate: getToday(),
-        };
-    // Reset today's count on a new day
+      : createDefaultState();
+
     if (parsed.lastTodayDate !== getToday()) {
       return { ...parsed, todayCompleted: 0, lastTodayDate: getToday() };
     }
     return parsed;
   } catch {
-    return {
-      xp: 0,
-      streak: 0,
-      lastCompletedDate: null,
-      totalCompleted: 0,
-      todayCompleted: 0,
-      lastTodayDate: getToday(),
-    };
+    return createDefaultState();
   }
 }
 
-export function useGamification() {
-  const [stored, setStored] = useState<StoredState>(loadState);
+export function useGamification(userId: string | null) {
+  const [stored, setStored] = useState<StoredState>(() => loadState(userId));
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-  }, [stored]);
+    setStored(loadState(userId));
+  }, [userId]);
+
+  useEffect(() => {
+    const storageKey = getStorageKey(userId);
+    if (!storageKey) {
+      return;
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(stored));
+  }, [stored, userId]);
 
   const level = Math.floor(stored.xp / XP_PER_LEVEL) + 1;
   const xpInCurrentLevel = stored.xp % XP_PER_LEVEL;
@@ -70,6 +89,10 @@ export function useGamification() {
   };
 
   const addXP = (amount: number): { leveledUp: boolean; newLevel: number } => {
+    if (!userId) {
+      return { leveledUp: false, newLevel: level };
+    }
+
     const today = getToday();
     let leveledUp = false;
     let newLevel = level;

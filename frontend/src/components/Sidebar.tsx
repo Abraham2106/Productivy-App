@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Calendar, TrendingUp, Timer } from 'lucide-react';
+import { Calendar, LogOut, Timer, TrendingUp } from 'lucide-react';
 import type { ActiveView, GamificationState } from '../types';
 import TreeGrowth from './TreeGrowth';
 import LevelProgress from './LevelProgress';
@@ -11,6 +11,9 @@ interface SidebarProps {
   gamification: GamificationState;
   treeProgress: number;
   todayScore: number;
+  userLabel: string;
+  userEmail: string;
+  onSignOut: () => void;
 }
 
 const NAV_ITEMS: { view: ActiveView; label: string; Icon: React.ElementType }[] = [
@@ -25,6 +28,9 @@ export default function Sidebar({
   gamification,
   treeProgress,
   todayScore,
+  userLabel,
+  userEmail,
+  onSignOut,
 }: SidebarProps) {
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-full w-[280px] bg-[#F8F9FA]
@@ -56,6 +62,20 @@ export default function Sidebar({
           </motion.button>
         ))}
       </nav>
+
+      <div className="mb-4 rounded-2xl border-2 border-[#E9ECEF] bg-white p-4 shadow-sm">
+        <p className="section-label mb-2">Sesion activa</p>
+        <p className="truncate text-sm font-semibold text-[#2C3E50]">{userLabel}</p>
+        <p className="truncate text-xs text-[#95A5A6]">{userEmail}</p>
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="btn-secondary mt-4 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-sm"
+        >
+          <LogOut size={16} />
+          Cerrar sesion
+        </button>
+      </div>
 
       {/* Score display */}
       <div className="bg-gradient-to-r from-[#F8F9FA] to-[#E9ECEF] rounded-2xl p-4 mb-4 shadow-lg">

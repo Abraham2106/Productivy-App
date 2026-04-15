@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Calendar, TrendingUp, Timer, Plus, Sprout } from 'lucide-react';
+import { Calendar, LogOut, Plus, Sprout, Timer, TrendingUp } from 'lucide-react';
 import type { ActiveView, GamificationState } from '../types';
 
 interface MobileHeaderProps {
@@ -8,6 +8,8 @@ interface MobileHeaderProps {
   gamification: GamificationState;
   score: number;
   onAddTask: () => void;
+  userLabel: string;
+  onSignOut: () => void;
 }
 
 const NAV_ITEMS: { view: ActiveView; label: string; Icon: React.ElementType }[] = [
@@ -22,6 +24,8 @@ export default function MobileHeader({
   gamification,
   score,
   onAddTask,
+  userLabel,
+  onSignOut,
 }: MobileHeaderProps) {
   return (
     <header className="lg:hidden sticky top-0 z-30 bg-gradient-to-r from-[#F8F9FA] to-[#E9ECEF]
@@ -59,6 +63,21 @@ export default function MobileHeader({
             <Plus size={18} />
           </motion.button>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 px-4 pb-3">
+        <div className="min-w-0">
+          <p className="section-label mb-1">Sesion activa</p>
+          <p className="truncate text-sm font-semibold text-[#2C3E50]">{userLabel}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="btn-secondary flex items-center gap-2 px-3 py-2 text-xs"
+        >
+          <LogOut size={14} />
+          Salir
+        </button>
       </div>
 
       {/* Nav tabs */}

@@ -1,15 +1,76 @@
 import { useCallback, useEffect, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
+import { supabase } from '../utils/supabase';
 import { getMetricBreakdown } from '../lib/metricScoring';
 import type { DailyMetrics, HabitPattern, Score, Task, WeeklyDataPoint } from '../types';
 
-const TASKS_STORAGE_KEY = 'growth_app_tasks';
-const METRICS_STORAGE_KEY = 'growth_app_metrics';
-const DEFAULT_USER_ID = 'local-user-001';
+interface TaskRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  task_type: 'BASE' | 'ADDITIONAL';
+  completed: boolean;
+  date: string;
+  created_at?: string;
+}
+
+interface DailyScoreRecord {
+  user_id: string;
+  date: string;
+  sleep_hours: number | null;
+  phone_minutes: number | null;
+  study_minutes: number | null;
+}
 
 function getDateString(targetDate: Date = new Date()): string {
-  return targetDate.toISOString().split('T')[0];
+  const year = targetDate.getFullYear();
+  const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+  const day = String(targetDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function sortTasks(records: TaskRecord[]): TaskRecord[] {
+  return [...records].sort((left, right) => {
+    const dateComparison = left.date.localeCompare(right.date);
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
+
+    return (left.created_at ?? '').localeCompare(right.created_at ?? '');
+  });
+}
+
+function mapTask(record: TaskRecord): Task {
+  return {
+    id: record.id,
+    user_id: record.user_id,
+    name: record.name,
+    task_type: record.task_type,
+    completed: record.completed,
+    date: record.date,
+  };
+}
+
+function buildMetricsMap(records: DailyScoreRecord[]): Record<string, DailyMetrics> {
+  return records.reduce<Record<string, DailyMetrics>>((accumulator, record) => {
+    if (
+      record.sleep_hours === null ||
+      record.phone_minutes === null ||
+      record.study_minutes === null
+    ) {
+      return accumulator;
+    }
+
+    accumulator[record.date] = {
+      user_id: record.user_id,
+      date: record.date,
+      sleep_hours: record.sleep_hours,
+      phone_minutes: record.phone_minutes,
+      study_minutes: record.study_minutes,
+    };
+
+    return accumulator;
+  }, {});
 }
 
 export function calculateScore(tasks: Task[], metrics?: DailyMetrics | null): Score {
@@ -39,79 +100,260 @@ export function calculateScore(tasks: Task[], metrics?: DailyMetrics | null): Sc
   return { value, breakdown };
 }
 
-function loadTasks(): Task[] {
-  try {
-    const raw = localStorage.getItem(TASKS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function loadMetrics(): Record<string, DailyMetrics> {
-  try {
-    const raw = localStorage.getItem(METRICS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-export function useTasks() {
-  const [tasks, setTasks] = useState<Task[]>(loadTasks);
-  const [metricsByDate, setMetricsByDate] = useState<Record<string, DailyMetrics>>(loadMetrics);
-
-  useEffect(() => {
-    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem(METRICS_STORAGE_KEY, JSON.stringify(metricsByDate));
-  }, [metricsByDate]);
+export function useTasks(userId: string | null) {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [metricsByDate, setMetricsByDate] = useState<Record<string, DailyMetrics>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const today = getDateString();
+
+  const syncDailyScore = useCallback(
+    async (nextTasks: Task[], nextMetricsByDate: Record<string, DailyMetrics>) => {
+      if (!userId) {
+        return;
+      }
+
+      const todayTasks = nextTasks.filter((task) => task.date === today);
+      const todayMetrics = nextMetricsByDate[today] ?? null;
+
+      if (todayTasks.length === 0 && !todayMetrics) {
+        const { error: deleteError } = await supabase
+          .from('daily_scores')
+          .delete()
+          .eq('user_id', userId)
+          .eq('date', today);
+
+        if (deleteError) {
+          throw deleteError;
+        }
+
+        return;
+      }
+
+      const score = calculateScore(todayTasks, todayMetrics).value;
+      const { error: upsertError } = await supabase.from('daily_scores').upsert(
+        {
+          user_id: userId,
+          date: today,
+          score,
+          sleep_hours: todayMetrics?.sleep_hours ?? null,
+          phone_minutes: todayMetrics?.phone_minutes ?? null,
+          study_minutes: todayMetrics?.study_minutes ?? null,
+        },
+        { onConflict: 'user_id,date' }
+      );
+
+      if (upsertError) {
+        throw upsertError;
+      }
+    },
+    [today, userId]
+  );
+
+  const refreshData = useCallback(async () => {
+    if (!userId) {
+      setTasks([]);
+      setMetricsByDate({});
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const startDate = getDateString(new Date(new Date().setDate(new Date().getDate() - 29)));
+
+    const [tasksResult, scoresResult] = await Promise.all([
+      supabase
+        .from('tasks')
+        .select('id, user_id, name, task_type, completed, date, created_at')
+        .eq('user_id', userId)
+        .gte('date', startDate)
+        .order('date', { ascending: true })
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('daily_scores')
+        .select('user_id, date, sleep_hours, phone_minutes, study_minutes')
+        .eq('user_id', userId)
+        .gte('date', startDate)
+        .order('date', { ascending: true }),
+    ]);
+
+    if (tasksResult.error || scoresResult.error) {
+      setTasks([]);
+      setMetricsByDate({});
+      setError(tasksResult.error?.message ?? scoresResult.error?.message ?? 'No se pudo cargar la data.');
+      setLoading(false);
+      return;
+    }
+
+    setTasks(sortTasks((tasksResult.data ?? []) as TaskRecord[]).map(mapTask));
+    setMetricsByDate(buildMetricsMap((scoresResult.data ?? []) as DailyScoreRecord[]));
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      void refreshData();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [refreshData]);
+
   const todayTasks = tasks.filter((task) => task.date === today);
   const todayMetrics = metricsByDate[today] ?? null;
 
   const addTask = useCallback(
-    (name: string, task_type: 'BASE' | 'ADDITIONAL'): Task => {
-      const newTask: Task = {
-        id: uuidv4(),
-        user_id: DEFAULT_USER_ID,
-        name,
-        task_type,
-        completed: false,
-        date: today,
-      };
-      setTasks((previous) => [...previous, newTask]);
-      return newTask;
+    async (name: string, task_type: 'BASE' | 'ADDITIONAL') => {
+      if (!userId) {
+        return;
+      }
+
+      setError(null);
+
+      const { data, error: insertError } = await supabase
+        .from('tasks')
+        .insert({
+          user_id: userId,
+          name,
+          task_type,
+          completed: false,
+          date: today,
+        })
+        .select('id, user_id, name, task_type, completed, date, created_at')
+        .single();
+
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
+
+      const insertedTask = mapTask(data as TaskRecord);
+      const nextTasks = sortTasks([
+        ...tasks,
+        {
+          ...(data as TaskRecord),
+          user_id: insertedTask.user_id,
+        },
+      ]).map(mapTask);
+
+      setTasks(nextTasks);
+
+      try {
+        await syncDailyScore(nextTasks, metricsByDate);
+      } catch (syncError) {
+        setError(syncError instanceof Error ? syncError.message : 'No pudimos sincronizar el score.');
+      }
     },
-    [today]
+    [metricsByDate, syncDailyScore, tasks, today, userId]
   );
 
-  const completeTask = useCallback((taskId: string) => {
-    setTasks((previous) =>
-      previous.map((task) =>
-        task.id === taskId ? { ...task, completed: true } : task
-      )
-    );
-  }, []);
+  const completeTask = useCallback(
+    async (taskId: string) => {
+      if (!userId) {
+        return;
+      }
 
-  const deleteTask = useCallback((taskId: string) => {
-    setTasks((previous) => previous.filter((task) => task.id !== taskId));
-  }, []);
+      const nextTasks = tasks.map((task) =>
+        task.id === taskId ? { ...task, completed: true } : task
+      );
+
+      setTasks(nextTasks);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({ completed: true })
+        .eq('id', taskId)
+        .eq('user_id', userId);
+
+      if (updateError) {
+        setError(updateError.message);
+        await refreshData();
+        return;
+      }
+
+      try {
+        await syncDailyScore(nextTasks, metricsByDate);
+      } catch (syncError) {
+        setError(syncError instanceof Error ? syncError.message : 'No pudimos sincronizar el score.');
+      }
+    },
+    [metricsByDate, refreshData, syncDailyScore, tasks, userId]
+  );
+
+  const deleteTask = useCallback(
+    async (taskId: string) => {
+      if (!userId) {
+        return;
+      }
+
+      const nextTasks = tasks.filter((task) => task.id !== taskId);
+      setTasks(nextTasks);
+      setError(null);
+
+      const { error: deleteError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        setError(deleteError.message);
+        await refreshData();
+        return;
+      }
+
+      try {
+        await syncDailyScore(nextTasks, metricsByDate);
+      } catch (syncError) {
+        setError(syncError instanceof Error ? syncError.message : 'No pudimos sincronizar el score.');
+      }
+    },
+    [metricsByDate, refreshData, syncDailyScore, tasks, userId]
+  );
 
   const saveTodayMetrics = useCallback(
-    (values: Omit<DailyMetrics, 'date' | 'user_id'>): DailyMetrics => {
-      const metrics: DailyMetrics = {
-        user_id: DEFAULT_USER_ID,
+    async (values: Omit<DailyMetrics, 'date' | 'user_id'>) => {
+      if (!userId) {
+        return;
+      }
+
+      const nextMetrics: DailyMetrics = {
+        user_id: userId,
         date: today,
         ...values,
       };
-      setMetricsByDate((previous) => ({ ...previous, [today]: metrics }));
-      return metrics;
+
+      const nextMetricsByDate = {
+        ...metricsByDate,
+        [today]: nextMetrics,
+      };
+
+      setMetricsByDate(nextMetricsByDate);
+      setError(null);
+
+      const score = calculateScore(todayTasks, nextMetrics).value;
+      const { error: upsertError } = await supabase.from('daily_scores').upsert(
+        {
+          user_id: userId,
+          date: today,
+          score,
+          sleep_hours: nextMetrics.sleep_hours,
+          phone_minutes: nextMetrics.phone_minutes,
+          study_minutes: nextMetrics.study_minutes,
+        },
+        { onConflict: 'user_id,date' }
+      );
+
+      if (upsertError) {
+        setError(upsertError.message);
+        await refreshData();
+      }
     },
-    [today]
+    [metricsByDate, refreshData, today, todayTasks, userId]
   );
 
   const getTodayScore = useCallback(
@@ -213,6 +455,8 @@ export function useTasks() {
     tasks,
     todayTasks,
     todayMetrics,
+    loading,
+    error,
     addTask,
     completeTask,
     deleteTask,
@@ -220,5 +464,6 @@ export function useTasks() {
     getTodayScore,
     getWeeklyData,
     getHabitPatterns,
+    refreshData,
   };
 }

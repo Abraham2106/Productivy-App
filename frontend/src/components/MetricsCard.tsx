@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { BookOpen, Moon, Smartphone } from 'lucide-react';
 
 import {
@@ -42,12 +42,6 @@ export default function MetricsCard({ metrics, onSave }: MetricsCardProps) {
   const [sleepHours, setSleepHours] = useState(metrics?.sleep_hours ?? 7);
   const [phoneMinutes, setPhoneMinutes] = useState(metrics?.phone_minutes ?? 60);
   const [studyMinutes, setStudyMinutes] = useState(metrics?.study_minutes ?? 30);
-
-  useEffect(() => {
-    setSleepHours(metrics?.sleep_hours ?? 7);
-    setPhoneMinutes(metrics?.phone_minutes ?? 60);
-    setStudyMinutes(metrics?.study_minutes ?? 30);
-  }, [metrics]);
 
   const sleepPoints = getSleepPoints(sleepHours);
   const phonePoints = getPhonePoints(phoneMinutes);

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 
@@ -12,14 +12,23 @@ import { useAchievements } from './hooks/useAchievements';
 import { useGamification } from './hooks/useGamification';
 import { useTasks } from './hooks/useTasks';
 import type { ActiveView, DailyMetrics } from './types';
+import { supabase } from './utils/supabase';
 import DailyView from './views/DailyView';
 import FocusView from './views/FocusView';
 import WeeklyView from './views/WeeklyView';
+
+interface TodoRecord {
+  id: number | string;
+  name: string;
+}
 
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('daily');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [xpGain, setXpGain] = useState<number | null>(null);
+  const [todos, setTodos] = useState<TodoRecord[]>([]);
+  const [todosLoading, setTodosLoading] = useState(true);
+  const [todosError, setTodosError] = useState<string | null>(null);
 
   const {
     todayTasks,
@@ -38,6 +47,36 @@ export default function App() {
   const score = getTodayScore();
   const weeklyData = getWeeklyData();
   const habitPatterns = getHabitPatterns();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function getTodos() {
+      setTodosLoading(true);
+      setTodosError(null);
+
+      const { data, error } = await supabase.from('todos').select('id, name');
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        setTodosError(error.message);
+        setTodos([]);
+      } else {
+        setTodos((data ?? []) as TodoRecord[]);
+      }
+
+      setTodosLoading(false);
+    }
+
+    void getTodos();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const treeProgress =
     todayTasks.length === 0
@@ -131,6 +170,47 @@ export default function App() {
 
         <main className="flex-1 p-4 lg:p-8">
           <div className="mx-auto max-w-[1400px]">
+            <section className="card mb-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="section-label">Supabase</p>
+                  <h2 className="text-lg font-bold text-[#2C3E50]">Todos sync preview</h2>
+                </div>
+                <span className="rounded-full bg-[#D4EDDA] px-3 py-1 text-xs font-semibold text-[#27AE60]">
+                  {todos.length} loaded
+                </span>
+              </div>
+
+              {todosLoading && (
+                <p className="mt-4 text-sm text-[#6C757D]">Loading todos from Supabase...</p>
+              )}
+
+              {!todosLoading && todosError && (
+                <p className="mt-4 text-sm text-[#C0392B]">
+                  Could not load todos: {todosError}
+                </p>
+              )}
+
+              {!todosLoading && !todosError && todos.length === 0 && (
+                <p className="mt-4 text-sm text-[#6C757D]">
+                  Connected successfully, but the `todos` table returned no rows.
+                </p>
+              )}
+
+              {!todosLoading && !todosError && todos.length > 0 && (
+                <ul className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {todos.map((todo) => (
+                    <li
+                      key={todo.id}
+                      className="rounded-[20px] border border-[#E9F3EA] bg-[#F8FFFA] px-4 py-3 text-sm font-medium text-[#2C3E50]"
+                    >
+                      {todo.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
             <AnimatePresence mode="wait">
               {activeView === 'daily' && (
                 <DailyView

@@ -1,0 +1,29 @@
+# Python test and cache artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/dist-ssr/
+frontend/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

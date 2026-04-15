@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    background-color: #F8F9FA;
+    color: #1A1A1A;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #F8F9FA; }
+  ::-webkit-scrollbar-thumb { background: #E9ECEF; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #ADB5BD; }
+}
+
+@layer components {
+  .card {
+    @apply bg-white border-2 border-[#E9ECEF] rounded-2xl p-6 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-[#2ECC71] to-[#27AE60] text-white font-bold
+           rounded-xl transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply bg-[#F8F9FA] border-2 border-[#E9ECEF] text-[#6C757D] font-semibold
+           rounded-xl transition-all hover:bg-white hover:border-[#2ECC71] hover:text-[#2ECC71];
+  }
+
+  .input-field {
+    @apply w-full px-5 py-3.5 bg-[#F8F9FA] border-2 border-[#E9ECEF] rounded-xl
+           text-base text-[#2C3E50] font-medium placeholder:text-[#ADB5BD]
+           focus:outline-none focus:ring-2 focus:ring-[#2ECC71] focus:border-[#2ECC71]
+           transition-all;
+  }
+
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-[#95A5A6];
+  }
+}

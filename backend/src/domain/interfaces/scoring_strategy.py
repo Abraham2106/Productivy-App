@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from ..entities.daily_metrics import DailyMetrics
 from ..entities.task import Task
 from ..entities.score import Score
 
@@ -9,4 +10,6 @@ class IScoringStrategy(ABC):
     touching TaskService or any other domain/application code."""
 
     @abstractmethod
-    def calculate(self, tasks: list[Task]) -> Score: ...
+    def calculate(
+        self, tasks: list[Task], metrics: DailyMetrics | None = None
+    ) -> Score: ...

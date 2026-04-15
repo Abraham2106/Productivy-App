@@ -1,56 +1,64 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 
-import type { ActiveView } from './types';
-import { useTasks } from './hooks/useTasks';
-import { useGamification } from './hooks/useGamification';
-import { useAchievements } from './hooks/useAchievements';
-import { DAILY_SCORE_GOAL } from './constants/data';
-
-import Sidebar from './components/Sidebar';
-import MobileHeader from './components/MobileHeader';
-import AddTaskModal from './components/AddTaskModal';
-import XPGainToast from './components/XPGainToast';
 import AchievementToast from './components/AchievementToast';
-
+import AddTaskModal from './components/AddTaskModal';
+import MobileHeader from './components/MobileHeader';
+import Sidebar from './components/Sidebar';
+import XPGainToast from './components/XPGainToast';
+import { DAILY_SCORE_GOAL } from './constants/data';
+import { useAchievements } from './hooks/useAchievements';
+import { useGamification } from './hooks/useGamification';
+import { useTasks } from './hooks/useTasks';
+import type { ActiveView, DailyMetrics } from './types';
 import DailyView from './views/DailyView';
-import WeeklyView from './views/WeeklyView';
 import FocusView from './views/FocusView';
+import WeeklyView from './views/WeeklyView';
 
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('daily');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [xpGain, setXpGain] = useState<number | null>(null);
 
-  const { todayTasks, addTask, completeTask, deleteTask, getTodayScore, getWeeklyData } =
-    useTasks();
+  const {
+    todayTasks,
+    todayMetrics,
+    addTask,
+    completeTask,
+    deleteTask,
+    saveTodayMetrics,
+    getTodayScore,
+    getWeeklyData,
+    getHabitPatterns,
+  } = useTasks();
   const { gamification, addXP } = useGamification();
   const { achievements, newlyUnlocked } = useAchievements(gamification, todayTasks);
 
   const score = getTodayScore();
   const weeklyData = getWeeklyData();
+  const habitPatterns = getHabitPatterns();
 
   const treeProgress =
     todayTasks.length === 0
       ? 0
-      : Math.round((todayTasks.filter((t) => t.completed).length / todayTasks.length) * 100);
+      : Math.round((todayTasks.filter((task) => task.completed).length / todayTasks.length) * 100);
 
   const handleCompleteTask = useCallback(
     (taskId: string) => {
-      const task = todayTasks.find((t) => t.id === taskId);
-      if (!task || task.completed) return;
+      const task = todayTasks.find((candidate) => candidate.id === taskId);
+      if (!task || task.completed) {
+        return;
+      }
 
       completeTask(taskId);
 
       const xpAmount = task.task_type === 'BASE' ? 10 : 5;
       const { leveledUp } = addXP(xpAmount);
 
-      // Show XP toast
       setXpGain(xpAmount);
       setTimeout(() => setXpGain(null), 2000);
 
-      // Task completion confetti
       confetti({
         particleCount: 30,
         spread: 40,
@@ -58,7 +66,6 @@ export default function App() {
         origin: { y: 0.7 },
       });
 
-      // Check if daily goal just met
       const newScore = score.value + (task.task_type === 'BASE' ? 10 : 5);
       const wasGoalMet = score.value < DAILY_SCORE_GOAL;
       const isGoalMet = newScore >= DAILY_SCORE_GOAL;
@@ -73,7 +80,6 @@ export default function App() {
         }, 300);
       }
 
-      // Level-up confetti burst
       if (leveledUp) {
         const burst = () =>
           confetti({
@@ -97,9 +103,15 @@ export default function App() {
     [addTask]
   );
 
+  const handleSaveMetrics = useCallback(
+    (values: Omit<DailyMetrics, 'date' | 'user_id'>) => {
+      saveTodayMetrics(values);
+    },
+    [saveTodayMetrics]
+  );
+
   return (
     <div className="flex min-h-screen bg-[#F8F9FA] font-inter">
-      {/* ── Desktop Sidebar ── */}
       <Sidebar
         activeView={activeView}
         onViewChange={setActiveView}
@@ -108,9 +120,7 @@ export default function App() {
         todayScore={score.value}
       />
 
-      {/* ── Main content area ── */}
-      <div className="flex-1 flex flex-col lg:ml-[280px]">
-        {/* Mobile header */}
+      <div className="flex flex-1 flex-col lg:ml-[280px]">
         <MobileHeader
           activeView={activeView}
           onViewChange={setActiveView}
@@ -119,18 +129,19 @@ export default function App() {
           onAddTask={() => setIsAddModalOpen(true)}
         />
 
-        {/* Page content */}
         <main className="flex-1 p-4 lg:p-8">
-          <div className="max-w-[1400px] mx-auto">
+          <div className="mx-auto max-w-[1400px]">
             <AnimatePresence mode="wait">
               {activeView === 'daily' && (
                 <DailyView
                   key="daily"
                   tasks={todayTasks}
                   score={score}
+                  metrics={todayMetrics}
                   onCompleteTask={handleCompleteTask}
                   onDeleteTask={deleteTask}
                   onOpenAddModal={() => setIsAddModalOpen(true)}
+                  onSaveMetrics={handleSaveMetrics}
                   streak={gamification.streak}
                 />
               )}
@@ -138,6 +149,7 @@ export default function App() {
                 <WeeklyView
                   key="weekly"
                   weeklyData={weeklyData}
+                  habits={habitPatterns}
                   achievements={achievements}
                 />
               )}
@@ -147,16 +159,13 @@ export default function App() {
         </main>
       </div>
 
-      {/* ── Overlays ── */}
       <AddTaskModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAdd={handleAddTask}
       />
 
-      <AnimatePresence>
-        {xpGain !== null && <XPGainToast key="xp" xp={xpGain} />}
-      </AnimatePresence>
+      <AnimatePresence>{xpGain !== null && <XPGainToast key="xp" xp={xpGain} />}</AnimatePresence>
 
       <AnimatePresence>
         {newlyUnlocked && (

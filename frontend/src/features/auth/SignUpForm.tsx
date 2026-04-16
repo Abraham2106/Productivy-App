@@ -29,7 +29,7 @@ export default function SignUpForm({ onSwitchMode }: SignUpFormProps) {
         password,
       });
       setSuccessMessage(
-        'Cuenta creada. Si tu proyecto exige confirmacion por email, revisa tu bandeja.'
+        'Cuenta creada. Revisa tu bandeja y confirma tu direccion de e-mail.'
       );
     } catch (authError) {
       const message =

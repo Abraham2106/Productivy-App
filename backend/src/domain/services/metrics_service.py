@@ -24,7 +24,7 @@ class MetricsService:
     async def register_metrics(self, metrics: DailyMetrics) -> DailyMetrics:
         saved_metrics = await self._metrics_repo.save(metrics)
         tasks = await self._task_repo.find_by_date(metrics.user_id, metrics.date)
-        score = self._scorer.calculate(tasks, saved_metrics)
+        score = await self._scorer.calculate(tasks, saved_metrics)
 
         if self._daily_score_repo is not None:
             await self._daily_score_repo.upsert_score(

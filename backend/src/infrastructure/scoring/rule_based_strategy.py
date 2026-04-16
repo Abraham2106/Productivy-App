@@ -2,6 +2,7 @@ import math
 
 from src.domain.entities.daily_metrics import DailyMetrics
 from src.domain.entities.score import Score
+from src.domain.entities.adaptive_score_context import AdaptiveScoreContext
 from src.domain.entities.task import Task, TaskType
 from src.domain.interfaces.scoring_strategy import IScoringStrategy
 
@@ -17,8 +18,11 @@ class RuleBasedStrategy(IScoringStrategy):
       ADDITIONAL not completed -> 0 pts
     """
 
-    def calculate(
-        self, tasks: list[Task], metrics: DailyMetrics | None = None
+    async def calculate(
+        self,
+        tasks: list[Task],
+        metrics: DailyMetrics | None = None,
+        context: AdaptiveScoreContext | None = None,
     ) -> Score:
         breakdown: dict[str, int] = {}
         total = 0

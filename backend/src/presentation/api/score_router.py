@@ -6,7 +6,8 @@ from src.domain.entities.score import Score
 from src.domain.entities.weekly_score import DailyScoreSummary, WeeklyScore
 from src.domain.services.analytics_service import AnalyticsService
 from src.domain.services.task_service import TaskService
-from .dependencies import get_analytics_service, get_task_service
+from src.domain.services.adaptive_scoring_service import AdaptiveScoringService
+from .dependencies import get_analytics_service, get_task_service, get_adaptive_scoring_service
 
 router = APIRouter(prefix="/score", tags=["score"])
 
@@ -14,11 +15,11 @@ router = APIRouter(prefix="/score", tags=["score"])
 @router.get(
     "/today",
     response_model=Score,
-    summary="Calculate and return the score for today",
+    summary="Calculate and return the adaptive score for today",
 )
 async def get_today_score(
     user_id: UUID,
-    service: TaskService = Depends(get_task_service),
+    service: AdaptiveScoringService = Depends(get_adaptive_scoring_service),
 ) -> Score:
     return await service.get_today_score(user_id)
 

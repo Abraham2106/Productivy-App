@@ -147,6 +147,9 @@ export function useTasks(userId: string | null) {
       if (upsertError) {
         throw upsertError;
       }
+      
+      // Invalidar caché del Coach al haber un cambio real
+      sessionStorage.removeItem('coach_feedback_today');
     },
     [today, userId]
   );

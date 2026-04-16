@@ -8,6 +8,7 @@ import MetricsCard from '../components/MetricsCard';
 import QuickStats from '../components/QuickStats';
 import ScoreCard from '../components/ScoreCard';
 import TaskItem from '../components/TaskItem';
+import CoachCard from '../components/CoachCard';
 import type { DailyMetrics, Score, Task } from '../types';
 
 interface DailyViewProps {
@@ -124,6 +125,7 @@ export default function DailyView({
       </div>
 
       <div className="w-full flex-shrink-0 space-y-4 lg:w-[360px]">
+        <CoachCard />
         <MetricsCard
           key={
             metrics

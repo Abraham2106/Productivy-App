@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import AchievementCard from '../components/AchievementCard';
 import HabitPatternsCard from '../components/HabitPatternsCard';
 import WeeklyChart from '../components/WeeklyChart';
+import AIPatternsCard from '../components/AIPatternsCard';
 import type { Achievement, HabitPattern, WeeklyDataPoint } from '../types';
 
 interface WeeklyViewProps {
@@ -61,6 +62,7 @@ export default function WeeklyView({
 
       <WeeklyChart data={weeklyData} />
       <HabitPatternsCard habits={habits} />
+      <AIPatternsCard />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="card">

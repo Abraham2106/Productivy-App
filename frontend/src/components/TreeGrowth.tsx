@@ -45,17 +45,17 @@ export default function TreeGrowth({ progress }: TreeGrowthProps) {
             {/* Trunk */}
             <line x1="40" y1="100" x2="40" y2="55" stroke="#6D4C41" strokeWidth="4" strokeLinecap="round" />
             {/* Canopy circles */}
-            <circle cx="40" cy="42" r="25" fill="#2ECC71" opacity="0.85" />
-            <circle cx="22" cy="55" r="18" fill="#52C41A" opacity="0.75" />
-            <circle cx="58" cy="55" r="18" fill="#52C41A" opacity="0.75" />
+            <circle cx="40" cy="42" r="25" fill="#2ECC71D9" /> {/* 85% opacity */}
+            <circle cx="22" cy="55" r="18" fill="#52C41ABF" /> {/* 75% opacity */}
+            <circle cx="58" cy="55" r="18" fill="#52C41ABF" /> {/* 75% opacity */}
           </motion.svg>
         )}
 
         {stage === 'tree' && (
           <div className="relative">
             <motion.svg
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0.0, scale: 0.8 }}
+              animate={{ opacity: 1.0, scale: 1 }}
               width="120" height="140" viewBox="0 0 120 140"
             >
               {/* Trunk */}
@@ -72,10 +72,10 @@ export default function TreeGrowth({ progress }: TreeGrowthProps) {
                 x1="60" y1="88" x2="90" y2="70" stroke="#6D4C41" strokeWidth="3" strokeLinecap="round"
               />
               {/* Canopy */}
-              <circle cx="60" cy="55" r="35" fill="#2ECC71" opacity="0.88" />
-              <circle cx="34" cy="72" r="28" fill="#52C41A" opacity="0.78" />
-              <circle cx="86" cy="72" r="28" fill="#52C41A" opacity="0.78" />
-              <circle cx="60" cy="30" r="20" fill="#2ECC71" opacity="0.70" />
+              <circle cx="60" cy="55" r="35" fill="#2ECC71E1" /> {/* 88% */}
+              <circle cx="34" cy="72" r="28" fill="#52C41AC7" /> {/* 78% */}
+              <circle cx="86" cy="72" r="28" fill="#52C41AC7" /> {/* 78% */}
+              <circle cx="60" cy="30" r="20" fill="#2ECC71B3" /> {/* 70% */}
             </motion.svg>
 
             {/* Floating particles */}
@@ -86,9 +86,9 @@ export default function TreeGrowth({ progress }: TreeGrowthProps) {
             ].map((p, i) => (
               <motion.div
                 key={i}
-                className="absolute top-4 w-2 h-2 rounded-full bg-[#2ECC71] opacity-70"
+                className="absolute top-4 w-2 h-2 rounded-full bg-[#2ECC71] bg-opacity-70"
                 style={{ left: p.x }}
-                animate={{ y: [-20, -60], opacity: [0.7, 0] }}
+                animate={{ y: [-20, -60], opacity: [0.7, 0.0] }}
                 transition={{
                   duration: 3,
                   delay: p.delay,
@@ -102,7 +102,7 @@ export default function TreeGrowth({ progress }: TreeGrowthProps) {
       </div>
 
       {/* Ground */}
-      <div className="w-full h-3 bg-gradient-to-t from-[#2C3E50] to-transparent rounded-full opacity-20" />
+      <div className="w-full h-3 bg-gradient-to-t from-[#2C3E50] to-transparent rounded-full bg-opacity-20" />
     </div>
   );
 }

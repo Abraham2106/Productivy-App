@@ -57,4 +57,34 @@ export interface Achievement {
   unlocked: boolean;
 }
 
+export interface CoachFeedback {
+  date: string;
+  summary: string;
+  recommendations: string[];
+}
+
+export interface FocusSession {
+  id: string;
+  user_id: string;
+  started_at: string;
+  ended_at: string;
+  session_type: string;
+  planned_minutes: number;
+  actual_minutes: number;
+  completed: boolean;
+}
+
+export interface FocusSessionSummary {
+  completed_work_sessions: number;
+  completed_break_sessions: number;
+  total_focus_minutes: number;
+}
+
+export interface BehaviorPattern {
+  title: string;
+  description: string;
+  impact: 'positive' | 'negative' | 'neutral' | string;
+  confidence: number;
+}
+
 export type ActiveView = 'daily' | 'weekly' | 'focus';

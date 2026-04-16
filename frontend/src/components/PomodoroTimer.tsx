@@ -8,7 +8,11 @@ const MAX_SESSIONS = 4;
 
 type TimerMode = 'work' | 'break';
 
-export default function PomodoroTimer() {
+interface PomodoroTimerProps {
+  onSessionComplete?: (type: 'work' | 'break', minutes: number) => void;
+}
+
+export default function PomodoroTimer({ onSessionComplete }: PomodoroTimerProps) {
   const [mode, setMode] = useState<TimerMode>('work');
   const [secondsLeft, setSecondsLeft] = useState(WORK_SECONDS);
   const [running, setRunning] = useState(false);
@@ -27,6 +31,9 @@ export default function PomodoroTimer() {
     setSecondsLeft((prev) => {
       if (prev <= 1) {
         setRunning(false);
+        if (onSessionComplete) {
+          onSessionComplete(mode, mode === 'work' ? Math.floor(WORK_SECONDS / 60) : Math.floor(BREAK_SECONDS / 60));
+        }
         if (mode === 'work') {
           setSessions((s) => s + 1);
           setMode('break');

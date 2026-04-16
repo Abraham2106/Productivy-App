@@ -62,7 +62,7 @@ class TaskService:
     async def get_score_by_date(self, user_id: UUID, target_date: date) -> Score:
         tasks = await self._repo.find_by_date(user_id, target_date)
         metrics = await self._get_metrics_for_date(user_id, target_date)
-        score = self._scorer.calculate(tasks, metrics)
+        score = await self._scorer.calculate(tasks, metrics)
 
         if self._daily_score_repo is not None:
             await self._daily_score_repo.upsert_score(user_id, target_date, score.value)

@@ -31,13 +31,17 @@ export function useAchievements(
   const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement | null>(null);
 
   useEffect(() => {
-    const frameId = window.requestAnimationFrame(() => {
-      setUnlockedIds(loadUnlocked(userId));
-      setNewlyUnlocked(null);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
+    setUnlockedIds(loadUnlocked(userId));
+    setNewlyUnlocked(null);
   }, [userId]);
+
+  // Manejar la desaparición automática del brindis de logro
+  useEffect(() => {
+    if (newlyUnlocked) {
+      const timer = window.setTimeout(() => setNewlyUnlocked(null), 2500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [newlyUnlocked]);
 
   useEffect(() => {
     const storageKey = getStorageKey(userId);
@@ -45,9 +49,11 @@ export function useAchievements(
       return;
     }
 
+    const stored = loadUnlocked(userId);
     const newUnlocks: string[] = [];
     for (const def of ACHIEVEMENT_DEFS) {
-      if (!unlockedIds.has(def.id) && def.check(gamification, todayTasks)) {
+      // Solo notificar si no está en el estado actual Y no estaba ya guardado en disco
+      if (!unlockedIds.has(def.id) && !stored.has(def.id) && def.check(gamification, todayTasks)) {
         newUnlocks.push(def.id);
       }
     }
@@ -60,11 +66,9 @@ export function useAchievements(
         setUnlockedIds(updated);
         setNewlyUnlocked({ ...firstDef, unlocked: true });
       });
-      const timer = window.setTimeout(() => setNewlyUnlocked(null), 4000);
 
       return () => {
         window.cancelAnimationFrame(frameId);
-        clearTimeout(timer);
       };
     }
   }, [gamification, todayTasks, unlockedIds, userId]);

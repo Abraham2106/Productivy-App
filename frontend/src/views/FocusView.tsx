@@ -11,7 +11,8 @@ export default function FocusView() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:8001/focus/today?user_id=${user.id}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+      const res = await fetch(`${apiUrl}/focus/today?user_id=${user.id}`);
       if (res.ok) {
         const data = await res.json();
         setSummary(data);
@@ -31,7 +32,8 @@ export default function FocusView() {
     const started_at = new Date(ended_at.getTime() - minutes * 60000);
 
     try {
-      await fetch(`http://localhost:8001/focus/sessions?user_id=${user.id}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+      await fetch(`${apiUrl}/focus/sessions?user_id=${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

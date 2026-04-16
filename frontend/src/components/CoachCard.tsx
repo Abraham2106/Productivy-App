@@ -23,7 +23,8 @@ export default function CoachCard() {
         }
 
         // 2. Comprobar si hay actualizaciones (Solo llegará aquí si no hay caché)
-        const res = await fetch(`http://localhost:8001/coach/today?user_id=${user.id}`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+        const res = await fetch(`${apiUrl}/coach/today?user_id=${user.id}`);
         if (res.ok) {
            const data = await res.json();
            setFeedback(data);

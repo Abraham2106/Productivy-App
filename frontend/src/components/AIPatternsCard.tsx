@@ -12,7 +12,8 @@ export default function AIPatternsCard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       try {
-        const res = await fetch(`http://localhost:8001/patterns/?user_id=${user.id}`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+        const res = await fetch(`${apiUrl}/patterns/?user_id=${user.id}`);
         if(res.ok) {
            const data = await res.json();
            setPatterns(data);
